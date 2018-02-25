@@ -1,0 +1,62 @@
+Comments
+
+I think there should be a single chain of derived liability
+	parents shouldn't be able to assign 2 babysitters independently - if something happened which babysitter is to blame?
+
+Without distinction of primary owner and non primary owner it is easy (as it is now) that a non-primary owner can hold ownership hostage
+		indeed with the current loose setup the idea of "return" is only enforced in dogma - in fact the leasee can initiate a return request, and upon having it granted become a sole owner of an asset
+	
+Handmedown additions:
+
+	modifier canLease(_asset){
+		require(entities[_asset].owners[msg.sender] == true);
+		_;
+	}
+	
+	//make request Handoff and acceptReturn canLease
+	
+	
+	function acceptHandoff (address _asset, address _leasee) public {
+		//require accepter is requested to take asset
+		require(requests[_asset].requestee == _leasee && requests[_asset].isGiveReq == true);
+	    entities[_leasee].assets[_asset] = true;
+		entities[_asset].owners[_leasee] = true;
+		//entities[_leasee].assets.push( _asset );
+		//entities[_asset].owners.push( _owners );
+	}
+	
+	function acceptReturn (address _asset) public canLease(_asset){
+		//require return request of asset from leasee exists
+		require(requests[_asset].requestee == msg.sender && requests[_asset].isGiveReq == false);
+		
+		entities[msg.sender].assets[_asset] = false;
+		entities[_asset].owners[msg.sender] = false;
+	}
+	
+	
+	//current implementation (mapping addresses to t/f to determine if owned by entity) does not allow for inventorying
+	//relies on a dynamic array implementation of tracking entity ownership and owned by properties
+
+	//First return is a list of all ownerships
+	//Second return is index of first coOwnerships (subsequent indices are coownerships)
+	function getInventory () external view returns(address[], uint){
+		address[] memory inventory = new address[](entities[msg.sender].assets.length);
+		address[] memory uniqueOwnerships;
+		address[] memory coOwnerships;
+		for(uint i = 0; i < entities[msg.sender].assets.length; i++){
+			if( entities[entities[msg.sender].assets[i]].owners.length == 1){
+				uniqueOwnerships.push(entities[msg.sender].assets[i]);
+			} else {
+				coOwnerships.push(entities[msg.sender].assets[i]);
+			}
+		}
+		
+		uint memory firstCoOwned = uniqueOwnerships.length;
+		for(uint i = 0; i < uniqueOwnerships.length; i++){
+			inventory[i] = uniqueOwnerships[i]
+		}
+		for(uint i = 0; i < coOwnerships.length; i++){
+			inventory[firstCoOwned+i] = coOwnerships[i];
+		}
+		return (inventory, firstCoOwned);
+	}
